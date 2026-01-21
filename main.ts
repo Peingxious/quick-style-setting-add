@@ -1,4 +1,4 @@
-import { App, Plugin, Notice, WorkspaceLeaf } from 'obsidian';
+import { App, Plugin, Notice, WorkspaceLeaf, setIcon } from 'obsidian';
 import { SnippetManagerModal } from './src/SnippetManagerModal';
 import { StyleSettingsView, VIEW_TYPE_STYLE_SETTINGS } from './src/StyleSettingsView';
 
@@ -34,7 +34,8 @@ export default class QuickStyleSettingsPlugin extends Plugin {
 
         // Add Status Bar Item
         const statusBarItemEl = this.addStatusBarItem();
-        statusBarItemEl.setText('Style Settings Manager');
+        setIcon(statusBarItemEl, 'paint-bucket');
+        statusBarItemEl.setAttribute('aria-label', 'Style Settings Manager');
         statusBarItemEl.addClass('mod-clickable');
         statusBarItemEl.onClickEvent(() => {
             this.activateView();
