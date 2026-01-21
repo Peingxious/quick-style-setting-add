@@ -58,7 +58,9 @@ export class StyleSettingsBuilder {
                 currentContainer = settingsList; // Reset to main list
                 
                 const groupContainer = settingsList.createDiv('setting-group');
+                groupContainer.style.marginTop = '00px';
                 groupContainer.style.marginBottom = '00px';
+
                 
                 // Create a container for children
                 const childrenContainer = groupContainer.createDiv('setting-group-children');
@@ -132,10 +134,73 @@ export class StyleSettingsBuilder {
         header.style.alignItems = 'center';
         header.style.padding = '4px 0px'; // Reduced padding
         header.style.cursor = 'pointer';
+        header.style.width = '100%';
         
         // Highlight active/controlled items slightly or use hover
         header.onmouseenter = () => header.style.backgroundColor = 'var(--background-modifier-hover)';
         header.onmouseleave = () => header.style.backgroundColor = 'transparent';
+
+        // Drag Handle (Moved to First Position)
+        const dragHandle = new ExtraButtonComponent(header)
+            .setIcon('grip-vertical')
+            .setTooltip('Drag to reorder')
+            .extraSettingsEl;
+        dragHandle.style.cursor = 'grab';
+        dragHandle.setAttribute('draggable', 'true');
+        dragHandle.style.color = 'var(--text-muted)';
+        dragHandle.style.marginRight = '4px';
+
+        // Drag Events
+        dragHandle.addEventListener('dragstart', (e) => {
+            e.dataTransfer?.setData('text/plain', index.toString());
+            e.dataTransfer?.setDragImage(itemContainer, 0, 0);
+            e.stopPropagation();
+            
+            // Add a class to body to indicate dragging
+            document.body.addClass('is-dragging-setting');
+        });
+
+        dragHandle.addEventListener('dragend', (e) => {
+             document.body.removeClass('is-dragging-setting');
+        });
+
+        // Make the Item Container a Drop Zone
+        itemContainer.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Allow drop
+            e.stopPropagation();
+            
+            // Visual feedback
+            const rect = itemContainer.getBoundingClientRect();
+            const isTopHalf = e.clientY < rect.top + rect.height / 2;
+            
+            itemContainer.style.borderTop = isTopHalf ? '2px solid var(--interactive-accent)' : '';
+            itemContainer.style.borderBottom = !isTopHalf ? '2px solid var(--interactive-accent)' : '1px solid var(--background-modifier-border)';
+        });
+
+        itemContainer.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Reset styles
+            itemContainer.style.borderTop = '';
+            itemContainer.style.borderBottom = '1px solid var(--background-modifier-border)';
+        });
+
+        itemContainer.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Reset styles
+            itemContainer.style.borderTop = '';
+            itemContainer.style.borderBottom = '1px solid var(--background-modifier-border)';
+
+            const fromIndex = parseInt(e.dataTransfer?.getData('text/plain') || '-1');
+            if (fromIndex === -1) return;
+
+            const rect = itemContainer.getBoundingClientRect();
+            const insertAfter = e.clientY >= rect.top + rect.height / 2;
+            
+            this.reorderSetting(fromIndex, index, insertAfter);
+        });
 
         if (controlledContainer) {
              header.style.fontWeight = 'bold';
@@ -187,118 +252,30 @@ export class StyleSettingsBuilder {
         titleEl.style.marginRight = '10px';
         titleEl.style.fontSize = '1em';
         
-        const typeBadge = header.createEl('span', { text: setting.type, cls: 'setting-type-badge' });
-        typeBadge.style.fontSize = '0.7em';
-        typeBadge.style.color = 'var(--text-muted)';
-        typeBadge.style.marginRight = '10px';
-        typeBadge.style.whiteSpace = 'nowrap';
-
         const controls = header.createDiv('setting-controls');
         controls.style.display = 'flex';
         controls.style.gap = '4px'; // Tighter gap
+        controls.style.alignItems = 'center';
+        controls.style.marginLeft = 'auto'; // Force right alignment
+
+        const typeBadge = controls.createEl('span', { text: setting.type, cls: 'setting-type-badge' });
+        typeBadge.style.fontSize = '0.7em';
+        typeBadge.style.color = 'var(--text-muted)';
+        typeBadge.style.marginRight = '4px';
+        typeBadge.style.whiteSpace = 'nowrap';
         
-        // Edit Settings Button (for Headings)
-        if (controlledContainer) {
-            // Link/Copy ID for Headings
-            new ExtraButtonComponent(controls)
-                .setIcon('link')
-                .setTooltip('Copy Heading ID')
-                .onClick((e) => {
-                    e.stopPropagation();
-                    if (setting.id) {
-                        navigator.clipboard.writeText(setting.id);
-                        new Notice('Heading ID copied to clipboard');
-                    } else {
-                        new Notice('No ID set for this heading');
-                    }
-                });
-        }
-
-        // Copy Variable
-        if (setting.type.startsWith('variable-')) {
-             new ExtraButtonComponent(controls)
-                .setIcon('copy')
-                .setTooltip('Copy')
-                .onClick((e) => {
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(`var(--${setting.id})`);
-                });
-        }
-
-        // Up/Down Buttons Removed - Replaced with Drag Handle
         
-        // Drag Handle
-        const dragHandle = new ExtraButtonComponent(controls)
-            .setIcon('grip-vertical')
-            .setTooltip('Drag to reorder')
-            .extraSettingsEl;
-        dragHandle.style.cursor = 'grab';
-        dragHandle.setAttribute('draggable', 'true');
-        dragHandle.style.color = 'var(--text-muted)';
-
-        // Drag Events
-        dragHandle.addEventListener('dragstart', (e) => {
-            e.dataTransfer?.setData('text/plain', index.toString());
-            e.dataTransfer?.setDragImage(itemContainer, 0, 0);
-            e.stopPropagation();
-            
-            // Add a class to body to indicate dragging
-            document.body.addClass('is-dragging-setting');
-        });
-
-        dragHandle.addEventListener('dragend', (e) => {
-             document.body.removeClass('is-dragging-setting');
-        });
-
-        // Make the Item Container a Drop Zone
-        itemContainer.addEventListener('dragover', (e) => {
-            e.preventDefault(); // Allow drop
-            e.stopPropagation();
-            
-            // Visual feedback
-            const rect = itemContainer.getBoundingClientRect();
-            const isTopHalf = e.clientY < rect.top + rect.height / 2;
-            
-            itemContainer.style.borderTop = isTopHalf ? '2px solid var(--interactive-accent)' : '';
-            itemContainer.style.borderBottom = !isTopHalf ? '2px solid var(--interactive-accent)' : '1px solid var(--background-modifier-border)';
-            // Note: borderBottom default was 1px solid var(--background-modifier-border) or transparent? 
-            // In renderSettingItem top: itemContainer.style.borderBottom = '1px solid var(--background-modifier-border)';
-        });
-
-        itemContainer.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Reset styles
-            itemContainer.style.borderTop = '';
-            itemContainer.style.borderBottom = '1px solid var(--background-modifier-border)';
-        });
-
-        itemContainer.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Reset styles
-            itemContainer.style.borderTop = '';
-            itemContainer.style.borderBottom = '1px solid var(--background-modifier-border)';
-
-            const fromIndex = parseInt(e.dataTransfer?.getData('text/plain') || '-1');
-            if (fromIndex === -1) return;
-
-            const rect = itemContainer.getBoundingClientRect();
-            const insertAfter = e.clientY >= rect.top + rect.height / 2;
-            
-            this.reorderSetting(fromIndex, index, insertAfter);
-        });
-
 
         // Delete
-        new ExtraButtonComponent(controls)
+        const deleteBtn = new ExtraButtonComponent(controls)
             .setIcon('trash')
             .setTooltip('Delete')
-            .onClick((e) => {
-                e.stopPropagation();
+            .onClick(async (e) => {
+                if (e) e.stopPropagation();
+                // Double check confirmation? For now just delete with feedback.
                 this.deleteSetting(index);
             });
+        deleteBtn.extraSettingsEl.style.cursor = 'pointer';
 
         // Toggle Group Logic (Shared)
         const toggleGroup = () => {
@@ -517,7 +494,23 @@ export class StyleSettingsBuilder {
     }
 
     deleteSetting(index: number) {
-        this.config.settings.splice(index, 1);
+        const settings = this.config.settings;
+        if (index < 0 || index >= settings.length) return;
+
+        const itemToDelete = settings[index];
+        let deleteCount = 1;
+
+        // If deleting a heading, delete its children too
+        if (itemToDelete.type === 'heading') {
+             let i = index + 1;
+             while (i < settings.length && settings[i].type !== 'heading') {
+                 i++;
+             }
+             deleteCount = i - index;
+        }
+
+        settings.splice(index, deleteCount);
+        new Notice(`Deleted ${deleteCount} item(s)`);
         this.notifyChange();
         this.render();
     }
