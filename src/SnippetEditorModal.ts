@@ -1,4 +1,4 @@
-import { App, Modal, Setting, Notice, TextAreaComponent } from 'obsidian';
+import { App, Modal, Setting, Notice, TextAreaComponent, ButtonComponent, TextComponent } from 'obsidian';
 import { SnippetManager } from './SnippetManager';
 import { SnippetManagerModal } from './SnippetManagerModal';
 import QuickStyleSettingsPlugin from '../main';
@@ -174,47 +174,102 @@ export class SnippetEditorModal extends Modal {
                 // Attempt to restore cursor, though it might jump due to length change
                 // Ideally we only replace the top block.
             }
-        });
+        }, this.app);
     }
 
     renderCodeEditor() {
         this.codeContainer.empty();
         
-        const textArea = new TextAreaComponent(this.codeContainer)
-            .setValue(this.currentContent)
-            .onChange(value => {
-                this.currentContent = value;
-                // Debounce update builder?
-                // If we update builder on every keypress, it might be slow or disruptive.
-                // For now, let's add a "Refresh Builder" button or update on blur?
-                // Or just don't auto-update builder from code to avoid conflict loops.
-            });
-        
-        textArea.inputEl.style.width = '100%';
-        textArea.inputEl.style.height = '100%';
-        textArea.inputEl.style.fontFamily = 'monospace';
-        textArea.inputEl.style.resize = 'none';
-
-        // Add a "Refresh Builder" button in the Code header?
-        // Actually, let's just leave it. If they edit YAML manually, they might break the builder state until reload.
-        // To be safe: Only Builder -> Code sync is automatic. Code -> Builder requires re-opening or explicit action.
-        // Let's add a small "Sync to Builder" button above the code area.
-        
+        // Controls Container
         const controls = this.codeContainer.createDiv('code-controls');
         controls.style.marginBottom = '5px';
         controls.style.display = 'flex';
-        controls.style.justifyContent = 'flex-end';
+        controls.style.justifyContent = 'space-between';
+        controls.style.alignItems = 'center';
         
-        new ButtonComponent(controls)
-            .setButtonText('Refresh Builder from Code')
+        // Search Section
+        const searchContainer = controls.createDiv('search-container');
+        searchContainer.style.display = 'flex';
+        searchContainer.style.gap = '5px';
+        searchContainer.style.flex = '1';
+
+        let lastSearchTerm = '';
+        let lastSearchIndex = -1;
+
+        const performSearch = () => {
+             const term = searchInput.getValue();
+             if (!term) return;
+
+             // Reset index if term changed (though onChange handles this, strictness is good)
+             if (term !== lastSearchTerm) {
+                 lastSearchTerm = term;
+                 lastSearchIndex = -1;
+             }
+
+             const textAreaEl = this.codeContainer.querySelector('textarea');
+             if (!textAreaEl) return;
+             
+             const content = textAreaEl.value;
+             let nextIndex = content.indexOf(term, lastSearchIndex + 1);
+             
+             if (nextIndex === -1) {
+                 // Wrap around
+                 nextIndex = content.indexOf(term, 0);
+                 if (nextIndex === -1) {
+                     new Notice('Not found');
+                     return;
+                 }
+                 new Notice('Wrapped to top');
+             }
+             
+             lastSearchIndex = nextIndex;
+             
+             textAreaEl.focus();
+             textAreaEl.setSelectionRange(nextIndex, nextIndex + term.length);
+             // Scroll to selection is handled natively by focus+selection in most cases
+        };
+
+        const searchInput = new TextComponent(searchContainer)
+            .setPlaceholder('Search...')
+            .onChange(value => {
+                if (value !== lastSearchTerm) {
+                    lastSearchTerm = value;
+                    lastSearchIndex = -1;
+                }
+            });
+        
+        searchInput.inputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent default form submission if any
+                performSearch();
+            }
+        });
+
+        new ButtonComponent(searchContainer)
+            .setIcon('search')
+            .setTooltip('Find Next')
+            .onClick(() => performSearch());
+
+        // Refresh Builder Button
+        const actionContainer = controls.createDiv('action-container');
+        new ButtonComponent(actionContainer)
+            .setButtonText('Refresh Builder')
             .setIcon('refresh-cw')
             .onClick(() => {
                 this.renderBuilder();
                 new Notice('Builder updated from code');
             });
             
-        // Re-append textarea to be below controls
-        this.codeContainer.appendChild(textArea.inputEl);
+        const textArea = new TextAreaComponent(this.codeContainer)
+            .setValue(this.currentContent)
+            .onChange(value => {
+                this.currentContent = value;
+            });
+        
+        textArea.inputEl.style.width = '100%';
+        textArea.inputEl.style.height = '100%';
+        textArea.inputEl.style.fontFamily = 'monospace';
+        textArea.inputEl.style.resize = 'none';
     }
 
     async saveSnippet() {

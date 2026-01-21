@@ -14,6 +14,7 @@ export interface StyleSettingBase {
     title: string;
     description?: string;
     type: SettingType;
+    css?: string; // Associated CSS code
     [key: string]: any; // Allow other properties like title.zh, description.zh
 }
 
@@ -97,4 +98,6 @@ export interface StyleSettingsConfig {
     name?: string;
     id: string;
     settings: StyleSetting[];
+    globalCss?: string;
+    format?: 'cell' | 'asterisk';
 }

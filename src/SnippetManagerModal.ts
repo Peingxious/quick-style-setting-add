@@ -25,7 +25,7 @@ export class SnippetManagerModal extends Modal {
 				.setCta()
 				.onClick(() => {
 					this.close();
-					new SnippetEditorModal(this.app, this.snippetManager).open();
+					new SnippetEditorModal(this.app, this.plugin, this.snippetManager).open();
 				}));
 
 		const snippetsList = contentEl.createDiv({ cls: 'qss-snippets-list' });
