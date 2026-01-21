@@ -1,0 +1,33 @@
+.qss-snippets-list {
+    margin-top: 20px;
+}
+
+.qss-snippet-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 5px;
+    margin-bottom: 10px;
+    background-color: var(--background-primary);
+}
+
+.qss-snippet-item:hover {
+    background-color: var(--background-secondary);
+}
+
+.qss-snippet-name {
+    font-weight: bold;
+}
+
+.qss-editor-container textarea {
+    font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.qss-btn-group {
+    display: flex;
+    gap: 8px;
+}
