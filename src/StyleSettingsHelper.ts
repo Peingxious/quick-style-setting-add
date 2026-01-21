@@ -129,6 +129,9 @@ export class StyleSettingsHelper {
         const settingsBlock = `/* @settings\n${yaml}\n*/`;
         
         let cssBody = config.globalCss || '';
+        if (cssBody.trim()) {
+            cssBody = this.formatCss(cssBody.trim());
+        }
         
         if (config.format === 'asterisk') {
             const separator = '/************************************/';
@@ -137,19 +140,54 @@ export class StyleSettingsHelper {
                 if (setting.css && setting.css.trim()) {
                     const title = `/* ${setting.title || setting.id} */`;
                     // Ensure we don't double-add if it's already in globalCss (should be handled by extract)
-                    cssBody += `\n\n${separator}\n${title}\n${separator}\n${setting.css.trim()}`;
+                    const formattedCss = this.formatCss(setting.css.trim());
+                    cssBody += `\n\n${separator}\n${title}\n${separator}\n${formattedCss}`;
                 }
             }
         } else {
             // Default: Cell format
              for (const setting of config.settings) {
                 if (setting.css && setting.css.trim()) {
-                    cssBody += `\n\n/* @cell: ${setting.id} */\n${setting.css.trim()}\n/* @cell-end */`;
+                    const formattedCss = this.formatCss(setting.css.trim());
+                    cssBody += `\n\n/* @cell: ${setting.id} */\n${formattedCss}\n/* @cell-end */`;
                 }
             }
         }
 
         return `${settingsBlock}\n\n${cssBody}`;
+    }
+
+    private static formatCss(css: string): string {
+        const lines = css.split('\n');
+        let formatted: string[] = [];
+        const indent = '    ';
+        let depth = 0;
+
+        for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+
+            let printIndent = depth;
+            
+            // If line starts with closing brace, shift back one level for printing
+            if (line.startsWith('}')) {
+                printIndent = Math.max(0, depth - 1);
+            }
+
+            formatted.push(indent.repeat(printIndent) + line);
+
+            // Update depth based on braces in the line
+            // Remove comments for brace counting to avoid false positives
+            const cleanLine = line.replace(/\/\*.*?\*\//g, '');
+            const openBraces = (cleanLine.match(/{/g) || []).length;
+            const closeBraces = (cleanLine.match(/}/g) || []).length;
+            
+            depth += openBraces - closeBraces;
+            
+            // Safety check
+            if (depth < 0) depth = 0;
+        }
+        return formatted.join('\n');
     }
 
     private static cleanSettings(settings: any[]) {
