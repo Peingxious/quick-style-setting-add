@@ -1,10 +1,10 @@
 {
 	"id": "quick-style-settings-manager",
 	"name": "Quick Style Settings Manager",
-	"version": "1.0.0",
+	"version": "0.1.1",
 	"minAppVersion": "0.15.0",
 	"description": "A plugin to quickly manage (CRUD) Style Settings CSS snippets.",
-	"author": "Trae",
+	"author": "Peingxious",
 	"authorUrl": "",
 	"fundingUrl": "",
 	"isDesktopOnly": false
