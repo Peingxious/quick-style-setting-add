@@ -284,7 +284,6 @@ export class SnippetEditorModal extends Modal {
         await this.snippetManager.writeSnippet(this.currentName, this.currentContent);
         new Notice('Snippet saved.');
         this.close();
-        new SnippetManagerModal(this.app, this.plugin).open();
     }
 
 	onClose() {
